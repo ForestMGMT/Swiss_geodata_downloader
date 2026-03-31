@@ -420,12 +420,12 @@ def _clip_raster(path, geom, status):
 def _clip_vector(path, geom, status):
     """Clip all layers in a GeoPackage in-place to the given shapely geometry."""
     import shutil
-    import fiona
     import geopandas as gpd
+    import pyogrio
 
     status("Vektordaten werden auf Auswahl zugeschnitten...")
     clip_gdf = gpd.GeoDataFrame(geometry=[geom], crs="EPSG:2056")
-    layers   = fiona.listlayers(path)
+    layers   = pyogrio.list_layers(path)[:, 0].tolist()
     tmp_path = path + ".clip_tmp.gpkg"
 
     first = True
