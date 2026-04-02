@@ -36,18 +36,27 @@ LAYERS = {
     # Source: BAFU/LFI via swisstopo STAC + WMS.
     # STAC collection: ch.bafu.landesforstinventar-vegetationshoehenmodell_lidar
     # WMS layer:       ch.bafu.landesforstinventar-vegetationshoehenmodell_lidar
-    # LiDAR VHM — 0.5 m resolution, derived from swissSURFACE3D point cloud
+    # VHM stereo — 1 m resolution, derived from stereo aerial imagery (ADS-80/100).
+    # Full Switzerland coverage. Use this if the LiDAR version returns no data.
+    # STAC collection: ch.bafu.landesforstinventar-vegetationshoehenmodell
+    "vhm_stereo": {
+        "category":   "national",
+        "source":     "stac",
+        "collection": "ch.bafu.landesforstinventar-vegetationshoehenmodell",
+        "file_stem":  "vegetationshoehenmodell_1m",
+        "label":      "Vegetationshöhenmodell Stereo 1 m — volle CH-Abdeckung (BAFU/LFI)",
+    },
+    # VHM LiDAR — 0.5 m resolution, derived from swissSURFACE3D point cloud
     # (vegetation classes 3/4/5 rasterized at 0.5 m grid, leaf-off, updated annually).
-    # Downloaded as Cloud-Optimized GeoTIFF via STAC → pixel values = tree height in metres.
-    # WMS is intentionally NOT used here: WMS returns a rendered colour image,
-    # not real height values. STAC/COG is the only source that preserves actual values.
+    # Coverage is incomplete (~1/6 of Switzerland added per year) → black result = no coverage yet.
+    # Pixel values = tree height in metres. WMS intentionally not used (returns rendered RGB, not values).
     # STAC collection: ch.bafu.landesforstinventar-vegetationshoehenmodell_lidar
     "vhm_lidar": {
         "category":   "national",
         "source":     "stac",
         "collection": "ch.bafu.landesforstinventar-vegetationshoehenmodell_lidar",
-        "file_stem":  "vegetationshoehenmodell_lidar",
-        "label":      "Vegetationshöhenmodell LiDAR 0.5 m — GeoTIFF (BAFU/LFI)",
+        "file_stem":  "vegetationshoehenmodell_lidar_05m",
+        "label":      "Vegetationshöhenmodell LiDAR 0.5 m — wo verfügbar (BAFU/LFI)",
     },
     "alti_relief": {
         "category":  "national",
