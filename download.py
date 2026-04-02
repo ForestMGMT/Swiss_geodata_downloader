@@ -122,13 +122,17 @@ LAYERS = {
         "label":     "Forstkreise (Kt. Zürich)",
     },
     # ── Kantonale Geodaten — Kanton Aargau ───────────────────────────────────
+    # Phytosociological survey polygons with full attribute table (STAO_87, STAO_G10,
+    # E_KLASSE, STANDORT, GEOLOGIE, VERD_RISK). Downloaded as GeoPackage via ArcGIS
+    # REST MapServer query endpoint (layer 1 = verdichtet, full attribute table).
+    # Source: AGIS Kanton Aargau — https://www.ag.ch/geoportal/rest/services/w_pflanzensoziologie/MapServer
     "ag_pflanzensoziologie": {
-        "category":  "ag",
-        "source":    "wms",
-        "wms_url":   "https://wms.geo.ag.ch/public/ch_ag_geo_aw_stao/wms",
-        "wms_layer": "ch_ag_geo_aw_stao_01",
-        "file_stem": "ag_pflanzensoziologische_kartierung",
-        "label":     "Pflanzensoziologische Kartierung (Kt. Aargau)",
+        "category":        "ag",
+        "source":          "arcgis_vector",
+        "arcgis_base_url": "https://www.ag.ch/geoportal/rest/services/w_pflanzensoziologie/MapServer",
+        "layer_ids":       [1],
+        "file_stem":       "ag_pflanzensoziologische_kartierung",
+        "label":           "Pflanzensoziologische Kartierung (Kt. Aargau)",
     },
     "ag_wni": {
         "category":  "ag",
@@ -382,7 +386,8 @@ def _download_arcgis_vector(layer, bbox_2056, status):
 
     for layer_id in layer["layer_ids"]:
         status(f"Vektor-Abfrage Layer {layer_id}...")
-        url    = f"{ARCGIS_BASE}/{layer['service']}/MapServer/{layer_id}/query"
+        base   = layer.get("arcgis_base_url") or f"{ARCGIS_BASE}/{layer['service']}/MapServer"
+        url    = f"{base}/{layer_id}/query"
         offset = 0
         page   = 1000
         all_features = []
