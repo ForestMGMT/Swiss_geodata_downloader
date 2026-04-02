@@ -30,12 +30,25 @@ MAX_PX      = 4000   # max image dimension for WMS requests
 
 LAYERS = {
     # ── Nationale Geodaten (swisstopo / BAFU) ─────────────────────────────────
-    "vhm": {
+    # LiDAR VHM — 0.5 m resolution, derived from swissSURFACE3D point cloud
+    # (vegetation classes 3/4/5 rasterized at 0.5 m grid, leaf-off, updated annually).
+    # Higher-res replacement for the stereo-based 1 m VHM.
+    # Source: BAFU/LFI via swisstopo STAC + WMS.
+    # STAC collection: ch.bafu.landesforstinventar-vegetationshoehenmodell_lidar
+    # WMS layer:       ch.bafu.landesforstinventar-vegetationshoehenmodell_lidar
+    "vhm_lidar_stac": {
         "category":   "national",
         "source":     "stac",
-        "collection": "ch.bafu.landesforstinventar-vegetationshoehenmodell",
-        "file_stem":  "vegetationshoehenmodell",
-        "label":      "Vegetationshöhenmodell LiDAR (BAFU/LFI)",
+        "collection": "ch.bafu.landesforstinventar-vegetationshoehenmodell_lidar",
+        "file_stem":  "vegetationshoehenmodell_lidar",
+        "label":      "Vegetationshöhenmodell LiDAR 0.5 m — STAC/COG (BAFU/LFI)",
+    },
+    "vhm_lidar_wms": {
+        "category":  "national",
+        "source":    "wms",
+        "wms_layer": "ch.bafu.landesforstinventar-vegetationshoehenmodell_lidar",
+        "file_stem": "vegetationshoehenmodell_lidar_wms",
+        "label":     "Vegetationshöhenmodell LiDAR 0.5 m — WMS (BAFU/LFI)",
     },
     "alti_relief": {
         "category":  "national",
