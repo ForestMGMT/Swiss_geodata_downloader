@@ -36,19 +36,18 @@ LAYERS = {
     # Source: BAFU/LFI via swisstopo STAC + WMS.
     # STAC collection: ch.bafu.landesforstinventar-vegetationshoehenmodell_lidar
     # WMS layer:       ch.bafu.landesforstinventar-vegetationshoehenmodell_lidar
-    "vhm_lidar_stac": {
+    # LiDAR VHM — 0.5 m resolution, derived from swissSURFACE3D point cloud
+    # (vegetation classes 3/4/5 rasterized at 0.5 m grid, leaf-off, updated annually).
+    # Downloaded as Cloud-Optimized GeoTIFF via STAC → pixel values = tree height in metres.
+    # WMS is intentionally NOT used here: WMS returns a rendered colour image,
+    # not real height values. STAC/COG is the only source that preserves actual values.
+    # STAC collection: ch.bafu.landesforstinventar-vegetationshoehenmodell_lidar
+    "vhm_lidar": {
         "category":   "national",
         "source":     "stac",
         "collection": "ch.bafu.landesforstinventar-vegetationshoehenmodell_lidar",
         "file_stem":  "vegetationshoehenmodell_lidar",
-        "label":      "Vegetationshöhenmodell LiDAR 0.5 m — STAC/COG (BAFU/LFI)",
-    },
-    "vhm_lidar_wms": {
-        "category":  "national",
-        "source":    "wms",
-        "wms_layer": "ch.bafu.landesforstinventar-vegetationshoehenmodell_lidar",
-        "file_stem": "vegetationshoehenmodell_lidar_wms",
-        "label":     "Vegetationshöhenmodell LiDAR 0.5 m — WMS (BAFU/LFI)",
+        "label":      "Vegetationshöhenmodell LiDAR 0.5 m — GeoTIFF (BAFU/LFI)",
     },
     "alti_relief": {
         "category":  "national",
