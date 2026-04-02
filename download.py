@@ -133,6 +133,7 @@ LAYERS = {
         "layer_ids":       [1],
         "file_stem":       "ag_pflanzensoziologische_kartierung",
         "label":           "Pflanzensoziologische Kartierung (Kt. Aargau)",
+        "style_field":     "STAO_87",   # categorized fill + label per Standorttyp
     },
     "ag_wni": {
         "category":  "ag",
@@ -369,7 +370,101 @@ def _download_wms(layer, bbox_2056, status):
     return output_path
 
 
-# ── ArcGIS vector download (Kanton Bern) ──────────────────────────────────────
+# ── QGIS style helpers ────────────────────────────────────────────────────────
+
+def _generate_qml(gdf, style_field: str) -> str:
+    """Generate a QGIS QML style: categorized fill colours + centroid labels."""
+    import colorsys, html
+
+    values = sorted(gdf[style_field].dropna().astype(str).unique())
+    n      = max(len(values), 1)
+
+    cats, syms = "", ""
+    for i, val in enumerate(values):
+        h       = i / n
+        r, g, b = (int(x * 255) for x in colorsys.hsv_to_rgb(h, 0.65, 0.85))
+        safe    = html.escape(val)
+        cats += f'      <category value="{safe}" label="{safe}" symbol="{i}" render="true"/>\n'
+        syms += (
+            f'      <symbol type="fill" name="{i}" clip_to_extent="1" alpha="1" force_rhr="0">\n'
+            f'        <layer class="SimpleFill" enabled="1" pass="0" locked="0">\n'
+            f'          <Option type="Map">\n'
+            f'            <Option value="{r},{g},{b},180" name="color" type="QString"/>\n'
+            f'            <Option value="60,60,60,255" name="outline_color" type="QString"/>\n'
+            f'            <Option value="solid" name="outline_style" type="QString"/>\n'
+            f'            <Option value="0.26" name="outline_width" type="QString"/>\n'
+            f'            <Option value="MM" name="outline_width_unit" type="QString"/>\n'
+            f'            <Option value="solid" name="style" type="QString"/>\n'
+            f'          </Option>\n'
+            f'        </layer>\n'
+            f'      </symbol>\n'
+        )
+
+    return f"""<!DOCTYPE qgis PUBLIC 'http://mrcc.com/qgis.dtd' 'SYSTEM'>
+<qgis version="3.28" styleCategories="AllStyleCategories">
+  <renderer-v2 type="categorizedSymbol" attr="{style_field}" enableorderby="0" symbollevels="0" forceraster="0">
+    <categories>
+{cats}    </categories>
+    <symbols>
+{syms}    </symbols>
+  </renderer-v2>
+  <labeling type="simple">
+    <settings calloutType="simple">
+      <text-style fieldName="{style_field}" fontSize="8" fontWeight="50"
+        textColor="0,0,0,255" fontFamily="Arial" textOpacity="1"
+        fontItalic="0" fontUnderline="0" fontStrikeout="0"
+        fontSizeUnit="Point" isExpression="0" namedStyle="Regular">
+        <text-buffer bufferEnabled="1" bufferSize="1" bufferSizeUnits="MM"
+          bufferColor="255,255,255,255" bufferOpacity="1" bufferJoinStyle="128" bufferNoFill="1"/>
+      </text-style>
+      <text-format wrapChar="" multilineAlign="3"/>
+      <placement placement="1" centroidInside="1" centroidWhole="0"
+        fitInPolygonOnly="0" dist="0" distUnits="MM" offsetType="0"
+        xOffset="0" yOffset="0" offsetUnits="MM" rotationAngle="0"/>
+      <rendering drawLabels="1" obstacle="1" obstacleFactor="1"
+        minFeatureSize="0" maxNumLabels="2000" displayAll="0"
+        fontLimitPixelSize="0" fontMinPixelSize="3" fontMaxPixelSize="10000"/>
+    </settings>
+  </labeling>
+  <blendMode>0</blendMode>
+  <featureBlendMode>0</featureBlendMode>
+  <layerOpacity>1</layerOpacity>
+</qgis>"""
+
+
+def _embed_qgis_style(gpkg_path: str, layer_name: str, qml: str) -> None:
+    """Insert a QML style into the GeoPackage layer_styles table (auto-loaded by QGIS)."""
+    import sqlite3, datetime
+    con = sqlite3.connect(gpkg_path)
+    cur = con.cursor()
+    cur.execute("""
+        CREATE TABLE IF NOT EXISTS layer_styles (
+            id                INTEGER PRIMARY KEY AUTOINCREMENT,
+            f_table_catalog   TEXT DEFAULT '',
+            f_table_schema    TEXT DEFAULT '',
+            f_table_name      TEXT NOT NULL,
+            f_geometry_column TEXT DEFAULT 'geom',
+            styleName         TEXT NOT NULL,
+            styleQML          TEXT,
+            styleSLD          TEXT DEFAULT '',
+            useAsDefault      BOOLEAN DEFAULT 1,
+            description       TEXT DEFAULT '',
+            owner             TEXT DEFAULT '',
+            ui                TEXT DEFAULT '',
+            update_time       DATETIME
+        )
+    """)
+    cur.execute(
+        "INSERT INTO layer_styles "
+        "(f_table_name, f_geometry_column, styleName, styleQML, useAsDefault, update_time) "
+        "VALUES (?, 'geom', 'default', ?, 1, ?)",
+        (layer_name, qml, datetime.datetime.utcnow().isoformat()),
+    )
+    con.commit()
+    con.close()
+
+
+# ── ArcGIS vector download ─────────────────────────────────────────────────────
 
 def _download_arcgis_vector(layer, bbox_2056, status):
     try:
@@ -383,6 +478,7 @@ def _download_arcgis_vector(layer, bbox_2056, status):
     out_dir     = tempfile.mkdtemp(prefix="geodl_")
     output_path = os.path.join(out_dir, f"{layer['file_stem']}.gpkg")
     written     = False
+    last_gdf    = None
 
     for layer_id in layer["layer_ids"]:
         status(f"Vektor-Abfrage Layer {layer_id}...")
@@ -422,17 +518,24 @@ def _download_arcgis_vector(layer, bbox_2056, status):
             offset += page
 
         if all_features:
-            gdf  = gpd.GeoDataFrame.from_features(all_features, crs="EPSG:2056")
-            mode = "w" if not written else "a"
+            gdf      = gpd.GeoDataFrame.from_features(all_features, crs="EPSG:2056")
+            mode     = "w" if not written else "a"
             gdf.to_file(output_path, driver="GPKG",
                         layer=layer["file_stem"], mode=mode)
-            written = True
+            written  = True
+            last_gdf = gdf
 
     if not written:
         raise ValueError(
             "Keine Features im gewählten Gebiet gefunden. "
             "Bitte Gebiet vergrössern oder anderen Layer wählen."
         )
+
+    if layer.get("style_field") and last_gdf is not None:
+        status("QGIS-Stil wird eingebettet …")
+        qml = _generate_qml(last_gdf, layer["style_field"])
+        _embed_qgis_style(output_path, layer["file_stem"], qml)
+
     return output_path
 
 
