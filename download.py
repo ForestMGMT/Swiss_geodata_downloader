@@ -122,6 +122,14 @@ LAYERS = {
         "label":     "Forstkreise (Kt. Zürich)",
     },
     # ── Kantonale Geodaten — Kanton Aargau ───────────────────────────────────
+    "ag_pflanzensoziologie": {
+        "category":  "ag",
+        "source":    "wms",
+        "wms_url":   "https://wms.geo.ag.ch/public/ch_ag_geo_aw_stao/wms",
+        "wms_layer": "ch_ag_geo_aw_stao_01",
+        "file_stem": "ag_pflanzensoziologische_kartierung",
+        "label":     "Pflanzensoziologische Kartierung (Kt. Aargau)",
+    },
     "ag_wni": {
         "category":  "ag",
         "source":    "wms",
